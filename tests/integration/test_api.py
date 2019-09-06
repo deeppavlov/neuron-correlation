@@ -28,6 +28,7 @@ def get_number_from_file(file_name):
 
 class TestConductTrainExperiment:
     def test_training_without_tensor_saving(self):
+        """Check save loss value on test dataset"""
         save_path = "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training"
         config = {
             "num_repeats": 10,
