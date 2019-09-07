@@ -32,7 +32,6 @@ class TestConductTrainExperiment:
         save_path = "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training"
         config = {
             "num_repeats": 10,
-            "tensorflow_seed": None,
             "graph": {
                 "type": "feedforward",
                 "input_size": 784,
@@ -53,6 +52,7 @@ class TestConductTrainExperiment:
                 "metrics": ["accuracy", "perplexity"]
             },
             "train": {
+                "tensorflow_seed": None,
                 "restore_path": None,
                 "save_path": save_path,
                 "validation": {
