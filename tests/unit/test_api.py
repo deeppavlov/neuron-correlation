@@ -14,7 +14,8 @@ class TestConductTrainExperiment:
             "test": {}
         }
         with mock.patch('multiprocessing.Process') as MockProcess, \
-                mock.patch('multiprocessing.Queue'):
+                mock.patch('multiprocessing.Queue'), \
+                mock.patch('neuron_correlation.api.calculate_mean_and_std'):
             api.conduct_train_experiment(config)
             start_call_count = MockProcess.return_value.start.call_count
             join_call_count = MockProcess.return_value.join.call_count
