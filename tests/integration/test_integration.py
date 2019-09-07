@@ -32,6 +32,7 @@ class TestConductTrainExperiment:
         save_path = "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training"
         config = {
             "num_repeats": 10,
+            "save_path": save_path,
             "graph": {
                 "type": "feedforward",
                 "input_size": 784,
@@ -54,7 +55,6 @@ class TestConductTrainExperiment:
             "train": {
                 "tensorflow_seed": None,
                 "restore_path": None,
-                "save_path": save_path,
                 "validation": {
                     "scheduler": {
                         "type": "true_every_n_epochs",
