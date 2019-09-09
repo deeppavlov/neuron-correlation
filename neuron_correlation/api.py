@@ -16,8 +16,8 @@ def train_once(config):
 
 
 def train_repeatedly(config: Dict):
-    """Trains a model several times. For every train session the model is created
-    in a separate process. The number of repeats is config['num_repeats'].
+    """Trains a model several times. The models are created and trained
+    in separate processes. The number of repeats is config['num_repeats'].
     Calculates metrics on test dataset and saves them into file 'metrics_stats.json'
 
     Args:
