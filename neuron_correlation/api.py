@@ -25,7 +25,7 @@ def train_repeatedly(config: Dict):
     """
     for i in range(config['num_repeats']):
         config_for_repeat = copy.deepcopy(config)
-        del config['num_repeats']
+        del config_for_repeat['num_repeats']
         config_for_repeat['save_path'] = os.path.join(config_for_repeat['save_path'], str(i))
         p = mp.Process(train_once, args=(config,))
         p.start()
