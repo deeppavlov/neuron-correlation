@@ -31,7 +31,7 @@ def train_repeatedly(config: Dict):
         p.start()
         p.join()
     metrics_stats = calculate_metrics_stats(config['save_path'])
-    metrics_stats_save_path = os.path.join(config['save_path'], 'metrics_stats.json')
-    with open(metrics_stats_save_path, 'w') as f:
+    metrics_save_path = os.path.join(config['save_path'], 'metrics_stats.json')
+    with open(metrics_save_path, 'w') as f:
         json.dump(metrics_stats, f)
 
