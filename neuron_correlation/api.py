@@ -1,23 +1,37 @@
 import copy
+import json
 import multiprocessing as mp
-from typing import Dict
+import os
+from typing import Dict, Union
 
 from tensorflow.examples.tutorials.mnist import input_data
 
 
-def conduct_train_experiment(config: Dict):
-    """Launches training of a model accompanied with collecting and
-    saving of tensors. Each launch is initiated in separate process.
-    The number of launches is config['num_repeats']. Collects metrics
-    on test dataset and initiates averaging and saving of results into
-    file 'mean_and_std.txt'
+def calculate_metrics_stats(save_path):
+    pass
+
+
+def train_once(config):
+    pass
+
+
+def train_repeatedly(config: Dict):
+    """Trains a model several times. For every train session the model is created
+    in a separate process. The number of repeats is config['num_repeats'].
+    Calculates metrics on test dataset and saves them into file 'metrics_stats.json'
 
     Args:
-        config: Dict with the configuration of the experiment
+        config: a dictionary
     """
     for i in range(config['num_repeats']):
-        repetition_config = prepare_repetition_config(config, i)
-        conduct_experiment_repetition_in_sep_proc(repetition_config)
-    metrics_mean_and_stddev = calculate_metrics_mean_and_stddev(config['save_path'])
-    save_metrics_mean_and_stddev(metrics_mean_and_stddev, config['save_path'])
+        config_for_repeat = copy.deepcopy(config)
+        del config['num_repeats']
+        config_for_repeat['save_path'] = os.path.join(config_for_repeat['save_path'], str(i))
+        p = mp.Process(train_once, args=(config,))
+        p.start()
+        p.join()
+    metrics_stats = calculate_metrics_stats(config['save_path'])
+    metrics_stats_save_path = os.path.join(config['save_path'], 'metrics_stats.json')
+    with open(metrics_stats_save_path, 'w') as f:
+        json.dump(metrics_stats, f)
 

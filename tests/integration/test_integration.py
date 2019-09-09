@@ -111,7 +111,7 @@ class TestConductTrainExperiment:
             }
         }
 
-        api.conduct_train_experiment(config)
+        api.train_repeatedly(config)
 
         test_loss_file_name = save_path + '/testing/mnist_test/loss.txt'
         loss = get_number_from_file(test_loss_file_name)
