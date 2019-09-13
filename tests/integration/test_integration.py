@@ -136,7 +136,7 @@ def get_number_from_file(file_name):
     return value
 
 
-def get_test_summary_tensors_values(summarized_tensors, summary_tensors):
+def get_test_summary_tensors_values(config):
     pass
 
 
@@ -169,25 +169,26 @@ class TestTrainRepeatedly:
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
-        config['train']['train_summarized_tensors'] = copy.deepcopy(TENSOR_COLLECT_TRAIN_CONFIG)
+        config['train']['train_summary_tensors'] = copy.deepcopy(TENSOR_COLLECT_TRAIN_CONFIG)
         config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
 
         api.train_repeatedly(config)
 
         dirs_with_tensors = [save_path + '/{}/train_tensors'.format(i) for i in range(config['num_repeats'])]
-        tensor_values = get_test_summary_tensors_values(
-            config['train']['train_summarized_tensors'],
-            config['graph']['summary_tensors'],
-        )
+        train_tensors_creation_config = {
+            k: v for k, v in config['graph']['summary_tensors'].items()
+            if k in config['train']['train_summary_tensors']
+        }
+        tensor_values = get_test_summary_tensors_values(train_tensors_creation_config)
         for dir_ in dirs_with_tensors:
             report = check_summarized_tensors_in_dir(dir_, tensor_values)
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
                                  "Report:\n{}\nconfig['graph']['summary_tensors']:\n{}" \
-                                 "\nconfig['train']['train_summarized_tensors']:\n{}".format(
+                                 "\nconfig['train']['train_summary_tensors']:\n{}".format(
                 dir_,
                 report,
                 config['graph']['summary_tensors'],
-                config['train']['train_summarized_tensors']
+                config['train']['train_summary_tensors']
             )
 
 
