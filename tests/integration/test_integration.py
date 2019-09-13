@@ -1,4 +1,5 @@
 import copy
+import importlib
 import os
 
 import pytest
@@ -138,7 +139,12 @@ def get_number_from_file(file_name):
 
 def get_summary_tensors_values(config):
     """Evaluates simple tensors from summary creation configs"""
-    pass
+    values = {}
+    for k, v in config.items():
+        module = importlib.import_module(v['module'])
+        func = getattr(module, v['function'])
+        values[k] = func(*v['args'])
+    return values
 
 
 def check_summarized_tensors_in_dir(dir_, tensor_values):
