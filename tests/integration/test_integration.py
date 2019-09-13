@@ -136,7 +136,8 @@ def get_number_from_file(file_name):
     return value
 
 
-def get_test_summary_tensors_values(config):
+def get_summary_tensors_values(config):
+    """Evaluates simple tensors from summary creation configs"""
     pass
 
 
@@ -179,7 +180,7 @@ class TestTrainRepeatedly:
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in config['train']['train_summary_tensors']
         }
-        tensor_values = get_test_summary_tensors_values(train_tensors_creation_config)
+        tensor_values = get_summary_tensors_values(train_tensors_creation_config)
         for dir_ in dirs_with_tensors:
             report = check_summarized_tensors_in_dir(dir_, tensor_values)
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
