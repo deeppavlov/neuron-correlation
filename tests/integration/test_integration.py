@@ -104,12 +104,12 @@ TENSOR_COLLECT_TRAIN_CONFIG = {
 
 SUMMARY_TENSORS_CONFIG = {
     "tensor1": {
-        "module": "tensorflow",
+        "module": "tests/utils_for_testing/config",
         "function": "zeros",
         "args": [[3, 7, 9]]
     },
     "tensor2": {
-        "module": "tensorflow",
+        "module": "tests/utils_for_testing/config",
         "function": "ones",
         "args": [[11, 13, 17]]
     }
@@ -138,7 +138,7 @@ def get_number_from_file(file_name):
 
 
 def get_summary_tensors_values(config):
-    """Evaluates simple tensors from summary creation configs"""
+    """Evaluates simple tensors from summary tensors creation configs"""
     values = {}
     for k, v in config.items():
         module = importlib.import_module(v['module'])
