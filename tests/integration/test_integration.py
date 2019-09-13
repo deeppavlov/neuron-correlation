@@ -104,12 +104,12 @@ TENSOR_COLLECT_TRAIN_CONFIG = {
 
 SUMMARY_TENSORS_CONFIG = {
     "tensor1": {
-        "module": "tests/utils_for_testing/config",
+        "module": "tensorflow",
         "function": "zeros",
         "args": [[3, 7, 9]]
     },
     "tensor2": {
-        "module": "tests/utils_for_testing/config",
+        "module": "tensorflow",
         "function": "ones",
         "args": [[11, 13, 17]]
     }
