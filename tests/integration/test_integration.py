@@ -8,7 +8,7 @@ from neuron_correlation import api
 
 MNIST_CONFIG = {
     "num_repeats": 10,
-    "save_path": "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training",
+    "save_path": "results_of_tests/integration/test_mnist/train_repeatedly/only_training",
     "graph": {
         "type": "feedforward",
         "input_size": 784,
@@ -112,7 +112,7 @@ def get_number_from_file(file_name):
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check save loss value on test dataset"""
-        save_path = "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training"
+        save_path = "results_of_tests/integration/test_mnist/train_repeatedly/only_training"
         config = copy.deepcopy(MNIST_CONFIG)
         config['save_path'] = save_path
 
