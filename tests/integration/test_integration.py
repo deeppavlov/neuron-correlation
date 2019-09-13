@@ -1,8 +1,91 @@
+import copy
 import os
 
 import pytest
 
 from neuron_correlation import api
+
+
+MNIST_CONFIG = {
+    "num_repeats": 10,
+    "save_path": "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training",
+    "graph": {
+        "type": "feedforward",
+        "input_size": 784,
+        "layers": [
+            {
+                "type": "dense",
+                "size": 1000,
+                "activation": "relu"
+            },
+            {
+                "type": "dense",
+                "size": 10,
+                "activation": "softmax"
+            }
+        ],
+        "init_parameter": 1,
+        "optimizer": "sgd",
+        "metrics": ["accuracy", "perplexity"]
+    },
+    "train": {
+        "tensorflow_seed": None,
+        "restore_path": None,
+        "validation": {
+            "scheduler": {
+                "type": "true_every_n_epochs",
+                "epochs": 10
+            },
+            "dataset": {
+                "type": "mnist",
+                "input_file_name": "train-images-idx3-ubyte.gz",
+                "label_file_name": "train-labels-idx1-ubyte.gz",
+                "batch_size": 10000,
+                "first_example_index": 40000,
+                "total_number_of_examples": 10000
+            }
+        },
+        "checkpoints": {
+            "type": "true_every_n_epochs",
+            "epochs": 10
+        },
+        "stop": {
+            "type": "fixed",
+            "epochs": 100
+        },
+        "learning_rate": {
+            "type": "exponential_decay",
+            "init": 0.3,
+            "decay": 0.5,
+            "decay_epochs": 10
+        },
+        "dropout": 0.5,
+        "dataset": {
+            "type": "mnist",
+            "input_file_name": "train-images-idx3-ubyte.gz",
+            "label_file_name": "train-labels-idx1-ubyte.gz",
+            "batch_size": 32,
+            "first_example_index": 0,
+            "total_number_of_examples": 40000
+        },
+        "print_log": {
+            "every_validation"
+        }
+
+    },
+    "test": {
+        "mnist_test": {
+            "dataset": {
+                "type": "mnist",
+                "input_file_name": "test-images-idx3-ubyte.gz",
+                "label_file_name": "test-labels-idx1-ubyte.gz",
+                "batch_size": 32,
+                "first_example_index": 0,
+                "total_number_of_examples": 10000
+            }
+        }
+    }
+}
 
 
 def get_number_from_file(file_name):
@@ -30,86 +113,8 @@ class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check save loss value on test dataset"""
         save_path = "results_of_tests/neuron_correlation/test_mnist/TestMain/test_only_training"
-        config = {
-            "num_repeats": 10,
-            "save_path": save_path,
-            "graph": {
-                "type": "feedforward",
-                "input_size": 784,
-                "layers": [
-                    {
-                        "type": "dense",
-                        "size": 1000,
-                        "activation": "relu"
-                    },
-                    {
-                        "type": "dense",
-                        "size": 10,
-                        "activation": "softmax"
-                    }
-                ],
-                "init_parameter": 1,
-                "optimizer": "sgd",
-                "metrics": ["accuracy", "perplexity"]
-            },
-            "train": {
-                "tensorflow_seed": None,
-                "restore_path": None,
-                "validation": {
-                    "scheduler": {
-                        "type": "true_every_n_epochs",
-                        "epochs": 10
-                    },
-                    "dataset": {
-                        "type": "mnist",
-                        "input_file_name": "train-images-idx3-ubyte.gz",
-                        "label_file_name": "train-labels-idx1-ubyte.gz",
-                        "batch_size": 10000,
-                        "first_example_index": 40000,
-                        "total_number_of_examples": 10000
-                    }
-                },
-                "checkpoints": {
-                    "type": "true_every_n_epochs",
-                    "epochs": 10
-                },
-                "stop": {
-                    "type": "fixed",
-                    "epochs": 100
-                },
-                "learning_rate": {
-                    "type": "exponential_decay",
-                    "init": 0.3,
-                    "decay": 0.5,
-                    "decay_epochs": 10
-                },
-                "dropout": 0.5,
-                "dataset": {
-                    "type": "mnist",
-                    "input_file_name": "train-images-idx3-ubyte.gz",
-                    "label_file_name": "train-labels-idx1-ubyte.gz",
-                    "batch_size": 32,
-                    "first_example_index": 0,
-                    "total_number_of_examples": 40000
-                },
-                "print_log": {
-                    "every_validation"
-                }
-
-            },
-            "test": {
-                "mnist_test": {
-                    "dataset": {
-                        "type": "mnist",
-                        "input_file_name": "test-images-idx3-ubyte.gz",
-                        "label_file_name": "test-labels-idx1-ubyte.gz",
-                        "batch_size": 32,
-                        "first_example_index": 0,
-                        "total_number_of_examples": 10000
-                    }
-                }
-            }
-        }
+        config = copy.deepcopy(MNIST_CONFIG)
+        config['save_path'] = save_path
 
         api.train_repeatedly(config)
 
@@ -119,3 +124,6 @@ class TestTrainRepeatedly:
             "loss file name {} is not found or broken".format(test_loss_file_name)
         assert 0.95 <= loss <= 1.0, \
             "average loss {} on test dataset does not belong to interval {}".format(loss, [0.95, 1.0])
+
+    def test_tensor_saving(self):
+        pass
