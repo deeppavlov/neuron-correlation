@@ -88,6 +88,19 @@ MNIST_CONFIG = {
 }
 
 
+TENSOR_COLLECT_TRAIN_CONFIG = {
+    "tensor1": {
+        "type": "true_every_n_steps",
+        "steps": 1000
+    },
+    "tensor2": {
+        "type": "true_on_logarithmic_scale",
+        "init": 1,
+        "factor": 1.02
+    }
+}
+
+
 def get_number_from_file(file_name):
     """Opens file in read mode and tries to convert text inside into float.
     If succeeds return a number else returns `None`
@@ -130,4 +143,6 @@ class TestTrainRepeatedly:
         save_path = "results_of_tests/integration/test_mnist/train_repeatedly/train_tensor_saving"
         config = copy.deepcopy(MNIST_CONFIG)
         config['save_path'] = save_path
+
+        config['train']['train_tensor_collect'] = TENSOR_COLLECT_TRAIN_CONFIG
 
