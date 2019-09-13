@@ -125,5 +125,9 @@ class TestTrainRepeatedly:
         assert 0.95 <= loss <= 1.0, \
             "average loss {} on test dataset does not belong to interval {}".format(loss, [0.95, 1.0])
 
-    def test_tensor_saving(self):
-        pass
+    def test_train_tensor_saving(self):
+        """Test tensor saving during training"""
+        save_path = "results_of_tests/integration/test_mnist/train_repeatedly/train_tensor_saving"
+        config = copy.deepcopy(MNIST_CONFIG)
+        config['save_path'] = save_path
+
