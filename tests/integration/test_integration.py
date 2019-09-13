@@ -6,7 +6,7 @@ import pytest
 from neuron_correlation import api
 
 
-MNIST_CONFIG = {
+MNIST_MLP_CONFIG = {
     "num_repeats": 10,
     "save_path": "results_of_tests/integration/test_mnist/train_repeatedly/only_training",
     "graph": {
@@ -95,8 +95,22 @@ TENSOR_COLLECT_TRAIN_CONFIG = {
     },
     "tensor2": {
         "type": "true_on_logarithmic_scale",
-        "init": 1,
+        "init": 0,
         "factor": 1.02
+    }
+}
+
+
+SUMMARY_TENSORS_CONFIG = {
+    "tensor1": {
+        "module": "tensorflow",
+        "function": "zeros",
+        "args": [[3, 7, 9]]
+    },
+    "tensor2": {
+        "module": "tensorflow",
+        "function": "ones",
+        "args": [[11, 13, 17]]
     }
 }
 
@@ -122,11 +136,19 @@ def get_number_from_file(file_name):
     return value
 
 
+def get_test_summary_tensors_values(summarized_tensors, summary_tensors):
+    pass
+
+
+def check_summarized_tensors_in_dir(dir_, tensor_values):
+    pass
+
+
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
-        """Check save loss value on test dataset"""
+        """Check saved loss value on test dataset"""
         save_path = "results_of_tests/integration/test_mnist/train_repeatedly/only_training"
-        config = copy.deepcopy(MNIST_CONFIG)
+        config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
         api.train_repeatedly(config)
@@ -139,10 +161,33 @@ class TestTrainRepeatedly:
             "average loss {} on test dataset does not belong to interval {}".format(loss, [0.95, 1.0])
 
     def test_train_tensor_saving(self):
-        """Test tensor saving during training"""
+        """Check quantity, shape and values
+        of summarized tensors and steps on which
+        they were collected.
+        """
         save_path = "results_of_tests/integration/test_mnist/train_repeatedly/train_tensor_saving"
-        config = copy.deepcopy(MNIST_CONFIG)
+        config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
-        config['train']['train_tensor_collect'] = TENSOR_COLLECT_TRAIN_CONFIG
+        config['train']['train_summarized_tensors'] = copy.deepcopy(TENSOR_COLLECT_TRAIN_CONFIG)
+        config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
+
+        api.train_repeatedly(config)
+
+        dirs_with_tensors = [save_path + '/{}/train_tensors'.format(i) for i in range(config['num_repeats'])]
+        tensor_values = get_test_summary_tensors_values(
+            config['train']['train_summarized_tensors'],
+            config['graph']['summary_tensors'],
+        )
+        for dir_ in dirs_with_tensors:
+            report = check_summarized_tensors_in_dir(dir_, tensor_values)
+            assert report['ok'], "Summarized tensors in directory {} are not ok. " \
+                                 "Report:\n{}\nconfig['graph']['summary_tensors']:\n{}" \
+                                 "\nconfig['train']['train_summarized_tensors']:\n{}".format(
+                dir_,
+                report,
+                config['graph']['summary_tensors'],
+                config['train']['train_summarized_tensors']
+            )
+
 
