@@ -42,7 +42,7 @@ MNIST_MLP_CONFIG = {
                 "input_file_name": "train-images-idx3-ubyte.gz",
                 "label_file_name": "train-labels-idx1-ubyte.gz",
                 "batch_size": 10000,
-                "first_example_index": 40000,
+                "first_example_index": 50000,
                 "total_number_of_examples": 10000
             }
         },
@@ -67,7 +67,7 @@ MNIST_MLP_CONFIG = {
             "label_file_name": "train-labels-idx1-ubyte.gz",
             "batch_size": 32,
             "first_example_index": 0,
-            "total_number_of_examples": 40000
+            "total_number_of_examples": 50000
         },
         "print_log": {
             "every_validation"
