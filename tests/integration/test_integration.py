@@ -147,7 +147,16 @@ def get_summary_tensors_values(config):
     return values
 
 
-def check_summarized_tensors_in_dir(dir_, tensor_values):
+def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
+    report = {}
+    dirs = [e for e in os.listdir(dir_) if os.path.isdir(e)]
+    for d in dirs:
+        if d not in tensor_values:
+            report[d] = None
+            report['ok'] = False
+
+
+def get_summary_tensors_steps(tensors_config, stop_config, dataset_config):
     pass
 
 
@@ -187,8 +196,9 @@ class TestTrainRepeatedly:
             if k in config['train']['train_summary_tensors']
         }
         tensor_values = get_summary_tensors_values(train_tensors_creation_config)
+        tensor_steps = get_summary_tensors_steps(config['train'])
         for dir_ in dirs_with_tensors:
-            report = check_summarized_tensors_in_dir(dir_, tensor_values)
+            report = check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps)
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
                                  "Report:\n{}\nconfig['graph']['summary_tensors']:\n{}" \
                                  "\nconfig['train']['train_summary_tensors']:\n{}".format(
