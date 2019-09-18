@@ -1,10 +1,10 @@
-def logarithmic_scale_integers(init, factor, max_):
+def logarithmic_int_range(start, stop, factor):
     steps = []
-    while init < max_:
-        steps.append(init)
-        if int(init * factor) <= init:
-            init += 1
+    while start < stop:
+        steps.append(start)
+        if int(start * factor) <= start:
+            start += 1
         else:
-            init *= factor
-            init = int(init) + int(init - int(init) > 0)
+            start *= factor
+            start = int(start) + int(start - int(start) > 0)
     return steps
