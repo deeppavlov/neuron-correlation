@@ -38,12 +38,12 @@ MNIST_MLP_CONFIG = {
                 "epochs": 10
             },
             "dataset": {
-                "type": "mnist",
-                "input_file_name": "train-images-idx3-ubyte.gz",
-                "label_file_name": "train-labels-idx1-ubyte.gz",
-                "batch_size": 10000,
-                "first_example_index": 50000,
-                "total_number_of_examples": 10000
+                "tfds.load": {
+                    "name": "mnist:3.*.*",
+                    "split": "train[-20%:]",
+                    "batch_size": 10000,
+                    "as_supervised": True
+                }
             }
         },
         "checkpoints": {
@@ -62,12 +62,12 @@ MNIST_MLP_CONFIG = {
         },
         "dropout": 0.5,
         "dataset": {
-            "type": "mnist",
-            "input_file_name": "train-images-idx3-ubyte.gz",
-            "label_file_name": "train-labels-idx1-ubyte.gz",
-            "batch_size": 32,
-            "first_example_index": 0,
-            "total_number_of_examples": 50000
+            "tfds.load": {
+                "name": "mnist:3.*.*",
+                "split": "train[:80%]",
+                "batch_size": 32,
+                "as_supervised": True
+            }
         },
         "print_log": {
             "every_validation"
@@ -77,12 +77,12 @@ MNIST_MLP_CONFIG = {
     "test": {
         "mnist_test": {
             "dataset": {
-                "type": "mnist",
-                "input_file_name": "test-images-idx3-ubyte.gz",
-                "label_file_name": "test-labels-idx1-ubyte.gz",
-                "batch_size": 32,
-                "first_example_index": 0,
-                "total_number_of_examples": 10000
+                "tfds.load": {
+                    "name": "mnist:3.*.*",
+                    "split": "test",
+                    "batch_size": 10000,
+                    "as_supervised": True
+                }
             }
         }
     }
