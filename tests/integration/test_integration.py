@@ -12,7 +12,13 @@ from neuron_correlation import api
 
 MNIST_MLP_CONFIG = {
     "num_repeats": 10,
-    "save_path": "results_of_tests/integration/test_mnist/train_repeatedly/only_training",
+    "save_path": os.path.join(
+        "results_of_tests",
+        "integration",
+        "test_mnist",
+        "train_repeatedly",
+        "only_training"
+    ),
     "graph": {
         "type": "feedforward",
         "input_size": 784,
@@ -200,13 +206,24 @@ def get_summary_tensors_steps(tensors_config, stop_config, dataset_config):
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check saved loss value on test dataset"""
-        save_path = "results_of_tests/integration/test_mnist/train_repeatedly/only_training"
+        save_path = os.path.join(
+            "results_of_tests",
+            "integration",
+            "test_mnist",
+            "train_repeatedly",
+            "only_training"
+        )
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
         api.train_repeatedly(config)
 
-        test_loss_file_name = save_path + '/testing/mnist_test/loss.txt'
+        test_loss_file_name = os.path.join(
+            save_path,
+            'testing',
+            'mnist_test',
+            'loss.txt'
+        )
         loss = get_number_from_file(test_loss_file_name)
         assert loss is not None, \
             "loss file name {} is not found or broken".format(test_loss_file_name)
@@ -218,7 +235,13 @@ class TestTrainRepeatedly:
         of summarized tensors and steps on which
         they were collected.
         """
-        save_path = "results_of_tests/integration/test_mnist/train_repeatedly/train_tensor_saving"
+        save_path = os.path.join(
+            "results_of_tests",
+            "integration",
+            "test_mnist",
+            "train_repeatedly",
+            "train_tensor_saving"
+        )
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
@@ -227,7 +250,9 @@ class TestTrainRepeatedly:
 
         api.train_repeatedly(config)
 
-        dirs_with_tensors = [save_path + '/{}/train_tensors'.format(i) for i in range(config['num_repeats'])]
+        dirs_with_tensors = [
+            os.path.join(
+                save_path, '{}', 'train_tensors').format(i) for i in range(config['num_repeats'])]
         train_tensors_creation_config = {
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in config['train']['train_summary_tensors']
