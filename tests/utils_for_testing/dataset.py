@@ -27,15 +27,18 @@ def get_dataset_size(config):
             config['tfds.load']['data_dir'] = data_dir
         _, info = tfds.load(**config['tfds.load'], with_info=True)
         split_spec = config['tfds.load']['split']
-        split_name, split_endpoints = split_spec.split('[')
-        split_endpoints = split_endpoints[:-1].split(':')
-        split_size = info.splits[split_name].num_examples
-        split_endpoints = [get_endpoint_index(ep, split_size) for ep in split_endpoints]
-        if split_endpoints[0] is None:
-            split_endpoints[0] = 0
-        if split_endpoints[1] is None:
-            split_endpoints[1] = split_size
-        size = split_endpoints[1] - split_endpoints[0]
+        if '[' in split_spec:
+            split_name, split_endpoints = split_spec.split('[')
+            split_endpoints = split_endpoints[:-1].split(':')
+            split_size = info.splits[split_name].num_examples
+            split_endpoints = [get_endpoint_index(ep, split_size) for ep in split_endpoints]
+            if split_endpoints[0] is None:
+                split_endpoints[0] = 0
+            if split_endpoints[1] is None:
+                split_endpoints[1] = split_size
+            size = split_endpoints[1] - split_endpoints[0]
+        else:
+            size = info.splits[split_spec].num_examples
     else:
         raise ValueError("Cannot compute dataset size for config:\n{}".format(config))
     return size
