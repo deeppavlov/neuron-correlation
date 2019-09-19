@@ -1,18 +1,27 @@
 import copy
 import importlib
+import json
 import os
 import pytest
+import re
 
 import numpy as np
+import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1.python.framework as tensor_util
 
 import tests.utils_for_testing.dataset as dataset_utils
 import tests.utils_for_testing.scheduler as scheduler_utils
 from neuron_correlation import api
+from tests.utils_for_testing.path import get_repo_root
+
+
+EVENT_FILE_PATTERN = re.compile(r'^events\.out\.tfevents.[0-9]{10}\.')
 
 
 MNIST_MLP_CONFIG = {
     "num_repeats": 10,
     "save_path": os.path.join(
+        get_repo_root(),
         "results_of_tests",
         "integration",
         "test_mnist",
@@ -156,14 +165,62 @@ def get_summary_tensors_values(config):
     return values
 
 
+def check_summarized_tensor(dir_, tensor_name, value, steps):
+    report = {'ok': True}
+    event_files = [e for e in os.listdir(dir_) if EVENT_FILE_PATTERN.match(e) is not None]
+    # steps on which tensor was summarized
+    summarized_steps = []
+    # all tuples (step, tensor_value) in which tensor_value != value
+    wrong_results = []
+    for ef in event_files:
+        for e in tf.train.summary_iterator(os.path.join(dir_, ef)):
+            # `step` is added to `summarized_steps` after confirmation
+            # of presence of the required tensor in an event file
+            step = e.step
+            for v in e.summary.value:
+                if v.tag == tensor_name:
+                    summarized_steps.append(step)
+                    summarized = tensor_util.MakeNdarray(v.tensor)
+                    if value != summarized:
+                        wrong_results.append((step, summarized))
+                        report['ok'] = False
+    missing_steps = [s for s in steps if s not in summarized_steps]
+    unwanted_steps = [s for s in summarized_steps if s not in steps]
+    if missing_steps:
+        report['ok'] = False
+        report['missing_steps'] = missing_steps
+    else:
+        report['missing_steps'] = []
+    if unwanted_steps:
+        report['ok'] = False
+        report['unwanted_steps'] = unwanted_steps
+    else:
+        report['unwanted_steps'] = []
+    if wrong_results:
+        report['wrong_results'] = wrong_results
+    else:
+        report['wrong_results'] = []
+    report['expected_value'] = value
+    return report
+
+
 def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
-    report = {}
+    report = {'ok': True, 'tensors': {}}
     dirs = [e for e in os.listdir(dir_) if os.path.isdir(e)]
     for d in dirs:
         if d not in tensor_values:
-            report[d] = None
+            report['tensors'][d] = None
             report['ok'] = False
-    # TODO
+        else:
+            dir_report = check_summarized_tensor(
+                os.path.join(dir_, d),
+                d,
+                tensor_values[d],
+                tensor_steps[d]
+            )
+            report['ok'] = report['ok'] and dir_report['ok']
+            report['tensors'][d] = dir_report
+    return report
 
 
 def get_number_of_steps(stop_config, dataset_config):
@@ -203,10 +260,23 @@ def get_summary_tensors_steps(tensors_config, stop_config, dataset_config):
     return steps
 
 
+def make_short_report(report):
+    report = copy.deepcopy(report)
+    for v in report['tensors'].values():
+        v['number_of_missing_steps'] = len(v['missing_steps'])
+        del v['missing_steps']
+        v['number_of_unwanted_steps'] = len(v['unwanted_steps'])
+        del v['unwanted_steps']
+        v['number_of_wrong_results'] = len(v['wrong_results'])
+        del v['wrong_results']
+        v['example_of_wrong_result'] = v['wrong_results'][0]
+
+
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check saved loss value on test dataset"""
         save_path = os.path.join(
+            get_repo_root(),
             "results_of_tests",
             "integration",
             "test_mnist",
@@ -236,6 +306,7 @@ class TestTrainRepeatedly:
         they were collected.
         """
         save_path = os.path.join(
+            get_repo_root(),
             "results_of_tests",
             "integration",
             "test_mnist",
@@ -249,10 +320,7 @@ class TestTrainRepeatedly:
         config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
 
         api.train_repeatedly(config)
-
-        dirs_with_tensors = [
-            os.path.join(
-                save_path, '{}', 'train_tensors').format(i) for i in range(config['num_repeats'])]
+        launches_dirs = [os.path.join(save_path, '{}').format(i) for i in range(config['num_repeats'])]
         train_tensors_creation_config = {
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in config['train']['train_summary_tensors']
@@ -263,13 +331,21 @@ class TestTrainRepeatedly:
             config['train']['stop'],
             config['train']['dataset'],
         )
-        for dir_ in dirs_with_tensors:
-            report = check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps)
+        reports = []
+        for dir_ in launches_dirs:
+            report = check_summarized_tensors_in_dir(
+                os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
+            reports.append(report)
+            with open(os.path.join(dir_, 'tensors_report.json'), 'w') as f:
+                json.dump(report, f)
+        for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
-                                 "Report:\n{}\nconfig['graph']['summary_tensors']:\n{}" \
+                                 "Short report:\n{}\n**********\nFull report is in\n{}\n" \
+                                 "config['graph']['summary_tensors']:\n{}" \
                                  "\nconfig['train']['train_summary_tensors']:\n{}".format(
-                dir_,
-                report,
+                os.path.join(dir_, 'train_tensors'),
+                os.path.join(dir_, 'tensor_report.json'),
+                make_short_report(report),
                 config['graph']['summary_tensors'],
                 config['train']['train_summary_tensors']
             )
