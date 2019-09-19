@@ -1,11 +1,12 @@
 import copy
 import importlib
 import os
-
 import pytest
 
-import tests.utils_for_testing.scheduler as scheduler_utils
+import numpy as np
+
 import tests.utils_for_testing.dataset as dataset_utils
+import tests.utils_for_testing.scheduler as scheduler_utils
 from neuron_correlation import api
 
 
@@ -162,6 +163,19 @@ def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
 def get_number_of_steps(stop_config, dataset_config):
     batch_size = dataset_config['tfds.load']['batch_size']
     dataset_size = dataset_utils.get_dataset_size(dataset_config)
+    if stop_config['type'] == 'fixed':
+        if 'steps' in stop_config:
+            number_of_steps = stop_config['steps']
+        elif 'epochs' in stop_config:
+            number_of_steps = np.ceil(dataset_size / batch_size) * stop_config['epochs']
+        else:
+            raise ValueError(
+                "Only stop configs with 'epochs' or 'steps'"
+                " items are supported.\nStop config:\n{}".format(stop_config)
+            )
+    else:
+        raise ValueError("Only stop configs of type 'fixed' are supported")
+    return number_of_steps
 
 
 def get_true_scheduler_steps(config, num_steps):
