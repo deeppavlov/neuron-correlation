@@ -159,7 +159,8 @@ def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
 
 
 def get_number_of_steps(stop_config, dataset_config):
-    pass  # TODO
+    batch_size = dataset_config['tfds.load']['batch_size']
+    # TODO
 
 
 def get_true_scheduler_steps(config, num_steps):
