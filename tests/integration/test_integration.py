@@ -4,8 +4,9 @@ import os
 
 import pytest
 
+import tests.utils_for_testing.scheduler as scheduler_utils
+import tests.utils_for_testing.dataset as dataset_utils
 from neuron_correlation import api
-from tests.utils_for_testing import scheduler
 
 
 MNIST_MLP_CONFIG = {
@@ -160,14 +161,14 @@ def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
 
 def get_number_of_steps(stop_config, dataset_config):
     batch_size = dataset_config['tfds.load']['batch_size']
-    # TODO
+    dataset_size = dataset_utils.get_dataset_size(dataset_config)
 
 
 def get_true_scheduler_steps(config, num_steps):
     if config['type'] == 'true_every_n_steps':
         steps = list(range(0, num_steps, config['steps']))
     elif config['type'] == 'true_on_logarithmic_scale':
-        steps = scheduler.logarithmic_int_range(config['init'], num_steps, config['factor'])
+        steps = scheduler_utils.logarithmic_int_range(config['init'], num_steps, config['factor'])
     else:
         raise ValueError(
             "Unsupported Scheduler config type:\n'{}'".format(config['type']))
