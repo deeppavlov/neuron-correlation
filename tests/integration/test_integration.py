@@ -175,7 +175,7 @@ def get_number_of_steps(stop_config, dataset_config):
             )
     else:
         raise ValueError("Only stop configs of type 'fixed' are supported")
-    return number_of_steps
+    return int(number_of_steps)
 
 
 def get_true_scheduler_steps(config, num_steps):
