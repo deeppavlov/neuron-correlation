@@ -233,7 +233,11 @@ class TestTrainRepeatedly:
             if k in config['train']['train_summary_tensors']
         }
         tensor_values = get_summary_tensors_values(train_tensors_creation_config)
-        tensor_steps = get_summary_tensors_steps(config['train'])
+        tensor_steps = get_summary_tensors_steps(
+            config['train']['train_summary_tensors'],
+            config['train']['stop'],
+            config['train']['dataset'],
+        )
         for dir_ in dirs_with_tensors:
             report = check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps)
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
