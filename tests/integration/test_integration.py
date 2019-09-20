@@ -155,7 +155,9 @@ def get_number_from_file(file_name):
 
 
 def get_summary_tensors_values(config):
-    """Evaluates simple tensors from summary tensors creation configs
+    """Evaluates simple tensors from summary tensors creation configs.
+    Works only for tensors which are created independently from neural
+    network graph.
 
     Args:
         config: a dictionary. It is config for tensor creation, passed in 'graph'
