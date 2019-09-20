@@ -2,10 +2,10 @@ import copy
 import importlib
 import json
 import os
-import pytest
 import re
 
 import numpy as np
+import pytest
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v1.python.framework as tensor_util
 
