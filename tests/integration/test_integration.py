@@ -7,7 +7,6 @@ import re
 import numpy as np
 import pytest
 import tensorflow.compat.v1 as tf
-import tensorflow.compat.v1.python.framework as tensor_util
 
 import tests.utils_for_testing.dataset as dataset_utils
 import tests.utils_for_testing.scheduler as scheduler_utils
@@ -180,7 +179,7 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
             for v in e.summary.value:
                 if v.tag == tensor_name:
                     summarized_steps.append(step)
-                    summarized = tensor_util.MakeNdarray(v.tensor)
+                    summarized = tf.make_ndarray(v.tensor)
                     if value != summarized:
                         wrong_results.append((step, summarized))
                         report['ok'] = False
