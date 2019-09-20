@@ -135,7 +135,7 @@ SUMMARY_TENSORS_CONFIG = {
 
 def get_number_from_file(file_name):
     """Opens file in read mode and tries to convert text inside into float.
-    If succeeds return a number else returns `None`
+    If succeeds, returns a number else returns `None`
 
     Args:
         file_name: path like
@@ -155,7 +155,17 @@ def get_number_from_file(file_name):
 
 
 def get_summary_tensors_values(config):
-    """Evaluates simple tensors from summary tensors creation configs"""
+    """Evaluates simple tensors from summary tensors creation configs
+
+    Args:
+        config: a dictionary. It is config for tensor creation, passed in 'graph'
+            item of experiment config. The keys are tensor names (not in sense of
+            tensorflow tensor names) and values are dictionaries with items
+            'module', 'function', 'args'.
+    Returns:
+        values: a dictionary. Keys of the dictionary are tensor names
+            and values of the dictionary aretensor values.
+    """
     values = {}
     for k, v in config.items():
         module = importlib.import_module(v['module'])
