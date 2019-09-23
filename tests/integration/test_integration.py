@@ -1,7 +1,8 @@
 import copy
 import importlib
-import json
+import multiprocessing as mp
 import os
+import pickle
 import re
 
 import numpy as np
@@ -10,6 +11,7 @@ import tensorflow.compat.v1 as tf
 
 import tests.utils_for_testing.dataset as dataset_utils
 import tests.utils_for_testing.scheduler as scheduler_utils
+import tests.utils_for_testing.tf_utils as tf_utils
 from neuron_correlation import api
 from tests.utils_for_testing.path import get_repo_root
 
@@ -172,7 +174,11 @@ def get_summary_tensors_values(config):
     for k, v in config.items():
         module = importlib.import_module(v['module'])
         func = getattr(module, v['function'])
-        values[k] = func(*v['args'])
+        q = mp.Queue()
+        p = mp.Process(target=tf_utils.evaluate_tensor_in_sep_process, args=(q, func, v['args']))
+        p.start()
+        values[k] = q.get()
+        p.join()
     return values
 
 
@@ -192,7 +198,7 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
                 if v.tag == tensor_name:
                     summarized_steps.append(step)
                     summarized = tf.make_ndarray(v.tensor)
-                    if value != summarized:
+                    if np.any(value != summarized):
                         wrong_results.append((step, summarized))
                         report['ok'] = False
     missing_steps = [s for s in steps if s not in summarized_steps]
@@ -217,7 +223,7 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
 
 def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
     report = {'ok': True, 'tensors': {}}
-    dirs = [e for e in os.listdir(dir_) if os.path.isdir(e)]
+    dirs = [e for e in os.listdir(dir_) if os.path.isdir(os.path.join(dir_, e))]
     for d in dirs:
         if d not in tensor_values:
             report['tensors'][d] = None
@@ -273,14 +279,18 @@ def get_summary_tensors_steps(tensors_config, stop_config, dataset_config):
 
 def make_short_report(report):
     report = copy.deepcopy(report)
-    for v in report['tensors'].values():
-        v['number_of_missing_steps'] = len(v['missing_steps'])
-        del v['missing_steps']
-        v['number_of_unwanted_steps'] = len(v['unwanted_steps'])
-        del v['unwanted_steps']
-        v['number_of_wrong_results'] = len(v['wrong_results'])
-        del v['wrong_results']
-        v['example_of_wrong_result'] = v['wrong_results'][0]
+    for dir_report in report.values():
+        if isinstance(dir_report, dict):
+            for v in report['tensors'].values():
+                v['number_of_missing_steps'] = len(v['missing_steps'])
+                del v['missing_steps']
+                v['number_of_unwanted_steps'] = len(v['unwanted_steps'])
+                del v['unwanted_steps']
+                v['number_of_wrong_results'] = len(v['wrong_results'])
+                if v['wrong_results']:
+                    v['example_of_wrong_result'] = v['wrong_results'][0]
+                del v['wrong_results']
+    return report
 
 
 class TestTrainRepeatedly:
@@ -347,8 +357,8 @@ class TestTrainRepeatedly:
             report = check_summarized_tensors_in_dir(
                 os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
             reports.append(report)
-            with open(os.path.join(dir_, 'tensors_report.json'), 'w') as f:
-                json.dump(report, f)
+            with open(os.path.join(dir_, 'tensors_report.json'), 'wb') as f:
+                pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
                                  "Short report:\n{}\n**********\nFull report is in\n{}\n" \
