@@ -114,7 +114,7 @@ TENSOR_COLLECT_TRAIN_CONFIG = {
         "steps": 1000
     },
     "tensor2": {
-        "type": "true_on_logarithmic_scale",
+        "type": "true_on_steps_logarithmic_scale",
         "init": 0,
         "factor": 1.02
     }
@@ -218,6 +218,7 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
     else:
         report['wrong_results'] = []
     report['expected_value'] = value
+    report['expected_shape'] = value.shape
     return report
 
 
@@ -260,9 +261,14 @@ def get_number_of_steps(stop_config, dataset_config):
 
 def get_true_scheduler_steps(config, num_steps):
     if config['type'] == 'true_every_n_steps':
-        steps = list(range(0, num_steps, config['steps']))
-    elif config['type'] == 'true_on_logarithmic_scale':
-        steps = scheduler_utils.logarithmic_int_range(config['init'], num_steps, config['factor'])
+        steps = list(range(0, num_steps+1, config['steps']))
+    elif config['type'] == 'true_on_steps_logarithmic_scale':
+        steps = scheduler_utils.logarithmic_int_range(
+            config['init'],
+            num_steps,
+            config['factor'],
+            include_stop=True,
+        )
     else:
         raise ValueError(
             "Unsupported Scheduler config type:\n'{}'".format(config['type']))
@@ -288,7 +294,8 @@ def make_short_report(report):
                 del v['unwanted_steps']
                 v['number_of_wrong_results'] = len(v['wrong_results'])
                 if v['wrong_results']:
-                    v['example_of_wrong_result'] = v['wrong_results'][0]
+                    v['zeroth_wrong_result'] = v['wrong_results'][0]
+                    v['shape_of_zeroth_wrong_result'] = v['wrong_results'][0][1].shape
                 del v['wrong_results']
     return report
 
@@ -360,13 +367,13 @@ class TestTrainRepeatedly:
             with open(os.path.join(dir_, 'tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
-            assert report['ok'], "Summarized tensors in directory {} are not ok. " \
-                                 "Short report:\n{}\n**********\nFull report is in\n{}\n" \
-                                 "config['graph']['summary_tensors']:\n{}" \
+            assert report['ok'], "Summarized tensors in directory '{}' are not ok. " \
+                                 "Short report:\n{}\n**********\nFull report is in\n'{}'\n**********\n" \
+                                 "config['graph']['summary_tensors']:\n{}\n**********" \
                                  "\nconfig['train']['train_summary_tensors']:\n{}".format(
                 os.path.join(dir_, 'train_tensors'),
-                os.path.join(dir_, 'tensor_report.pickle'),
                 make_short_report(report),
+                os.path.join(dir_, 'tensors_report.pickle'),
                 config['graph']['summary_tensors'],
                 config['train']['train_summary_tensors']
             )
