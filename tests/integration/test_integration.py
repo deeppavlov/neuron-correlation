@@ -332,7 +332,7 @@ class TestTrainRepeatedly:
             "integration",
             "test_mnist",
             "train_repeatedly",
-            "train_tensor_saving"
+            "train_tensor_summary"
         )
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
@@ -357,7 +357,7 @@ class TestTrainRepeatedly:
             report = check_summarized_tensors_in_dir(
                 os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
             reports.append(report)
-            with open(os.path.join(dir_, 'tensors_report.json'), 'wb') as f:
+            with open(os.path.join(dir_, 'tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
             assert report['ok'], "Summarized tensors in directory {} are not ok. " \
@@ -365,7 +365,7 @@ class TestTrainRepeatedly:
                                  "config['graph']['summary_tensors']:\n{}" \
                                  "\nconfig['train']['train_summary_tensors']:\n{}".format(
                 os.path.join(dir_, 'train_tensors'),
-                os.path.join(dir_, 'tensor_report.json'),
+                os.path.join(dir_, 'tensor_report.pickle'),
                 make_short_report(report),
                 config['graph']['summary_tensors'],
                 config['train']['train_summary_tensors']
