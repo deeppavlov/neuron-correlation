@@ -107,3 +107,4 @@ venv.bak/
 .mypy_cache/
 
 results_of_tests/
+results_of_experiments/
