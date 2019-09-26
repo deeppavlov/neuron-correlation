@@ -141,7 +141,7 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
         "mean": {
             "tensor1": {
                 "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor1"],
-                "numbers_of_batches": {
+                "indices_of_batches": {
                     "counter": "step",
                     "type": "true_on_range",
                     "step": 1
@@ -151,7 +151,7 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
         "all": {
             "tensor2": {
                 "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor2"],
-                "numbers_of_batches": {
+                "indices_of_batches": {
                     "counter": "step",
                     "type": "true_on_range",
                     "step": 3
