@@ -339,7 +339,7 @@ def get_true_scheduler_steps(config, num_steps):
 
 def get_train_summary_tensors_steps(tensors_config, stop_config, dataset_config):
     """Returns dictionary with steps on which tensors are summarized.
-    The function is for tensors calculated on training operations.
+    The function is for tensors obtained during training operations.
     """
     num_steps = get_number_of_steps(stop_config, dataset_config)
     steps = {}
@@ -348,8 +348,33 @@ def get_train_summary_tensors_steps(tensors_config, stop_config, dataset_config)
     return steps
 
 
-def get_dataset_summary_tensors_steps(tensors_config, stop_config):
-    pass
+def get_dataset_summary_tensors_steps(collection_config, stop_config, train_dataset_config):
+    """Returns dictionary with steps on which tensors are summarized.
+    The function is for tensors obtained during parsing dataset in
+    inference mode.
+    """
+    num_training_steps = get_number_of_steps(stop_config, train_dataset_config)
+    steps = {}
+    for ds, ds_config in collection_config.items():
+        ds_steps = {}
+        batch_size = ds_config['dataset']['tfds.load']['batch_size']
+        num_batches = int(np.ceil(dataset_utils.get_dataset_size(ds_config['dataset']) / batch_size))
+        method_steps = {}
+        for tensor_name, tensor_config in ds_config['all'].items():
+            method_steps[tensor_name] = {
+                'train_steps': get_true_scheduler_steps(
+                    tensor_config['train_steps'], num_training_steps),
+                'dataset_steps': get_true_scheduler_steps(
+                    tensor_config['indices_of_batches'], num_batches)
+            }
+        ds_steps['all'] = method_steps
+        method_steps = {}
+        for tensor_name, tensor_config in ds_config['mean'].items():
+            method_steps[tensor_name] = get_true_scheduler_steps(
+                tensor_config['train_steps'], num_training_steps)
+        ds_steps['mean'] = method_steps
+        steps[ds] = ds_steps
+    return steps
 
 
 def get_dataset_tensors_error_message(
@@ -358,7 +383,7 @@ def get_dataset_tensors_error_message(
         creation_config,
         collection_config,
 ):
-    pass
+    pass  # TODO
 
 
 def make_short_report(report):
@@ -485,7 +510,7 @@ class TestTrainRepeatedly:
         }
         tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
         tensor_steps = get_dataset_summary_tensors_steps(
-            config['train']['dataset_summary_tensors'], config['train']['stop'])
+            config['train']['dataset_summary_tensors'], config['train']['stop'], config['train']['dataset'])
 
         reports = []
         for dir_ in launches_dirs:
