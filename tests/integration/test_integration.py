@@ -273,7 +273,10 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
     return report
 
 
-def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
+def check_train_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
+    """Verifies correctness of summarized tensors in directory.
+    The function is for tensors obtained during train operations.
+    """
     report = {'ok': True, 'tensors': {}}
     dirs = [e for e in os.listdir(dir_) if os.path.isdir(os.path.join(dir_, e))]
     for d in dirs:
@@ -419,7 +422,7 @@ class TestTrainRepeatedly:
         )
         reports = []
         for dir_ in launches_dirs:
-            report = check_summarized_tensors_in_dir(
+            report = check_train_summarized_tensors_in_dir(
                 os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
             reports.append(report)
             with open(os.path.join(dir_, 'tensors_report.pickle'), 'wb') as f:
@@ -464,5 +467,8 @@ class TestTrainRepeatedly:
             if k in summarized_tensors_names
         }
         tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
-        tensor_steps = get_dataset_summary_tensors_steps()
+        tensor_steps = get_dataset_summary_tensors_steps(
+            config['train']['dataset_summary_tensors'], config['train']['stop'])
+        for dir_ in launches_dirs:
+            pass
         # TODO
