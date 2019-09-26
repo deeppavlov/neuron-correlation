@@ -108,7 +108,7 @@ MNIST_MLP_CONFIG = {
 }
 
 
-TENSOR_COLLECT_TRAIN_CONFIG = {
+TRAIN_TENSOR_SUMMARY_CONFIG = {
     "tensor1": {
         "type": "true_every_n_steps",
         "steps": 1000
@@ -117,6 +117,38 @@ TENSOR_COLLECT_TRAIN_CONFIG = {
         "type": "true_on_steps_logarithmic_scale",
         "init": 0,
         "factor": 1.02
+    }
+}
+
+
+DATASET_TENSOR_SUMMARY_CONFIG = {
+    "mnist_test": {
+        "dataset": {
+            "tfds.load": {
+                "name": "mnist:3.*.*",
+                "split": "test",
+                "batch_size": 10000,
+                "as_supervised": True
+            }
+        },
+        "mean": {
+            "tensor1": {
+                "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor1"],
+                "numbers_of_batches": {
+                    "type": "true_every_n_batches",
+                    "batches": 1
+                }
+            }
+        },
+        "all": {
+            "tensor2": {
+                "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor2"],
+                "numbers_of_batches": {
+                    "type": "true_every_n_batches",
+                    "batches": 3
+                }
+            }
+        }
     }
 }
 
@@ -142,7 +174,7 @@ def get_number_from_file(file_name):
     Args:
         file_name: path like
     Returns:
-        float or None
+        number: float or None
     """
     if os.path.exists(file_name):
         with open(file_name) as f:
@@ -180,6 +212,16 @@ def get_summary_tensors_values(config):
         values[k] = q.get()
         p.join()
     return values
+
+
+def get_list_of_dataset_tensors_names(config):
+    names = []
+    for ds_config in config.values():
+        for type_ in ['all', 'mean']:
+            for name in ds_config[type_].keys():
+                if name not in names:
+                    names.append(name)
+    return names
 
 
 def check_summarized_tensor(dir_, tensor_name, value, steps):
@@ -344,7 +386,7 @@ class TestTrainRepeatedly:
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
-        config['train']['train_summary_tensors'] = copy.deepcopy(TENSOR_COLLECT_TRAIN_CONFIG)
+        config['train']['train_summary_tensors'] = copy.deepcopy(TRAIN_TENSOR_SUMMARY_CONFIG)
         config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
 
         api.train_repeatedly(config)
@@ -378,4 +420,32 @@ class TestTrainRepeatedly:
                 config['train']['train_summary_tensors']
             )
 
+    def test_dataset_tensor_saving(self):
+        """Check quantity, shape and values
+        of summarized tensors and steps on
+        which they their collected
+        """
+        save_path = os.path.join(
+            get_repo_root(),
+            "results_of_tests",
+            "integration",
+            "test_mnist",
+            "train_repeatedly",
+            "dataset_tensor_summary"
+        )
+        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        config['save_path'] = save_path
 
+        config['train']['dataset_summary_tensors'] = copy.deepcopy(DATASET_TENSOR_SUMMARY_CONFIG)
+        config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
+
+        api.train_repeatedly(config)
+        launches_dirs = [os.path.join(save_path, '{}').format(i) for i in range(config['num_repeats'])]
+        summarized_tensors_names = get_list_of_dataset_tensors_names(
+            config['train']['dataset_summary_tensors'])
+        dataset_tensors_creation_config = {
+            k: v for k, v in config['graph']['summary_tensors'].items()
+            if k in summarized_tensors_names
+        }
+        tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
+        # TODO
