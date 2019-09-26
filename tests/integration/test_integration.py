@@ -53,8 +53,9 @@ MNIST_MLP_CONFIG = {
         "restore_path": None,
         "validation": {
             "scheduler": {
-                "type": "true_every_n_epochs",
-                "epochs": 10
+                "counter": 'epoch',
+                "type": "true_on_range",
+                "step": 10
             },
             "dataset": {
                 "tfds.load": {
@@ -66,18 +67,21 @@ MNIST_MLP_CONFIG = {
             }
         },
         "checkpoints": {
-            "type": "true_every_n_epochs",
-            "epochs": 10
+            "counter": "epoch",
+            "type": "true_on_range",
+            "step": 10
         },
         "stop": {
-            "type": "fixed",
-            "epochs": 100
+            "counter": "epoch",
+            "type": "true_on_value",
+            "value": 100
         },
         "learning_rate": {
+            "counter": "epoch",
             "type": "exponential_decay",
             "init": 0.3,
             "decay": 0.5,
-            "decay_epochs": 10
+            "step": 10
         },
         "dropout": 0.5,
         "dataset": {
@@ -110,13 +114,16 @@ MNIST_MLP_CONFIG = {
 
 TRAIN_TENSOR_SUMMARY_CONFIG = {
     "tensor1": {
-        "type": "true_every_n_steps",
-        "steps": 1000
+        "counter": "step",
+        "type": "true_on_range",
+        "step": 1000
     },
     "tensor2": {
-        "type": "true_on_steps_logarithmic_scale",
+        "counter": "step",
+        "type": "true_on_logrange",
         "init": 0,
-        "factor": 1.02
+        "factor": 1.02,
+        "include_stop": True
     }
 }
 
@@ -135,8 +142,9 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
             "tensor1": {
                 "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor1"],
                 "numbers_of_batches": {
-                    "type": "true_every_n_batches",
-                    "batches": 1
+                    "counter": "step",
+                    "type": "true_on_range",
+                    "step": 1
                 }
             }
         },
@@ -144,8 +152,9 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
             "tensor2": {
                 "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor2"],
                 "numbers_of_batches": {
-                    "type": "true_every_n_batches",
-                    "batches": 3
+                    "counter": "step",
+                    "type": "true_on_range",
+                    "step": 3
                 }
             }
         }
@@ -286,11 +295,11 @@ def check_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
 def get_number_of_steps(stop_config, dataset_config):
     batch_size = dataset_config['tfds.load']['batch_size']
     dataset_size = dataset_utils.get_dataset_size(dataset_config)
-    if stop_config['type'] == 'fixed':
-        if 'steps' in stop_config:
-            number_of_steps = stop_config['steps']
-        elif 'epochs' in stop_config:
-            number_of_steps = np.ceil(dataset_size / batch_size) * stop_config['epochs']
+    if stop_config['type'] == 'true_on_value':
+        if stop_config['counter'] == 'step':
+            number_of_steps = stop_config['value']
+        elif stop_config['counter'] == 'epoch':
+            number_of_steps = np.ceil(dataset_size / batch_size) * stop_config['value']
         else:
             raise ValueError(
                 "Only stop configs with 'epochs' or 'steps'"
@@ -302,14 +311,14 @@ def get_number_of_steps(stop_config, dataset_config):
 
 
 def get_true_scheduler_steps(config, num_steps):
-    if config['type'] == 'true_every_n_steps':
-        steps = list(range(0, num_steps+1, config['steps']))
-    elif config['type'] == 'true_on_steps_logarithmic_scale':
+    if config['type'] == 'true_on_range':
+        steps = list(range(0, num_steps+1, config['step']))
+    elif config['type'] == 'true_on_logrange':
         steps = scheduler_utils.logarithmic_int_range(
             config['init'],
             num_steps,
             config['factor'],
-            include_stop=True,
+            include_stop=config["include_stop"],
         )
     else:
         raise ValueError(
