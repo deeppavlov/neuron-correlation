@@ -326,12 +326,19 @@ def get_true_scheduler_steps(config, num_steps):
     return steps
 
 
-def get_summary_tensors_steps(tensors_config, stop_config, dataset_config):
+def get_train_summary_tensors_steps(tensors_config, stop_config, dataset_config):
+    """Returns dictionary with steps on which tensors are summarized.
+    The function is for tensors calculated on training operations.
+    """
     num_steps = get_number_of_steps(stop_config, dataset_config)
     steps = {}
     for tensor, t_config in tensors_config.items():
         steps[tensor] = get_true_scheduler_steps(t_config, num_steps)
     return steps
+
+
+def get_dataset_summary_tensors_steps(tensors_config, stop_config):
+    pass
 
 
 def make_short_report(report):
@@ -405,7 +412,7 @@ class TestTrainRepeatedly:
             if k in config['train']['train_summary_tensors']
         }
         tensor_values = get_summary_tensors_values(train_tensors_creation_config)
-        tensor_steps = get_summary_tensors_steps(
+        tensor_steps = get_train_summary_tensors_steps(
             config['train']['train_summary_tensors'],
             config['train']['stop'],
             config['train']['dataset'],
@@ -457,4 +464,5 @@ class TestTrainRepeatedly:
             if k in summarized_tensors_names
         }
         tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
+        tensor_steps = get_dataset_summary_tensors_steps()
         # TODO
