@@ -40,5 +40,6 @@ def get_dataset_size(config):
         else:
             size = info.splits[split_spec].num_examples
     else:
-        raise ValueError("Cannot compute dataset size for config:\n{}".format(config))
+        raise ValueError("Only configs with 'tfds.load' key are supported.\n"
+                         "Cannot compute dataset size for config:\n{}".format(config))
     return size
