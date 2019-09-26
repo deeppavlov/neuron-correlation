@@ -295,6 +295,14 @@ def check_train_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
     return report
 
 
+def check_dataset_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
+    """Verifies correctness of summarized tensors in directory.
+    The function is for tensors obtained during processing of
+    a dataset in the inference mode.
+    """
+    pass  # TODO
+
+
 def get_number_of_steps(stop_config, dataset_config):
     batch_size = dataset_config['tfds.load']['batch_size']
     dataset_size = dataset_utils.get_dataset_size(dataset_config)
@@ -341,6 +349,15 @@ def get_train_summary_tensors_steps(tensors_config, stop_config, dataset_config)
 
 
 def get_dataset_summary_tensors_steps(tensors_config, stop_config):
+    pass
+
+
+def get_dataset_tensors_error_message(
+        launch_dir,
+        report,
+        creation_config,
+        collection_config,
+):
     pass
 
 
@@ -425,7 +442,7 @@ class TestTrainRepeatedly:
             report = check_train_summarized_tensors_in_dir(
                 os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
             reports.append(report)
-            with open(os.path.join(dir_, 'tensors_report.pickle'), 'wb') as f:
+            with open(os.path.join(dir_, 'train_tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
             assert report['ok'], "Summarized tensors in directory '{}' are not ok. " \
@@ -434,7 +451,7 @@ class TestTrainRepeatedly:
                                  "\nconfig['train']['train_summary_tensors']:\n{}".format(
                 os.path.join(dir_, 'train_tensors'),
                 make_short_report(report),
-                os.path.join(dir_, 'tensors_report.pickle'),
+                os.path.join(dir_, 'train_tensors_report.pickle'),
                 config['graph']['summary_tensors'],
                 config['train']['train_summary_tensors']
             )
@@ -469,6 +486,18 @@ class TestTrainRepeatedly:
         tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
         tensor_steps = get_dataset_summary_tensors_steps(
             config['train']['dataset_summary_tensors'], config['train']['stop'])
+
+        reports = []
         for dir_ in launches_dirs:
-            pass
-        # TODO
+            report = check_dataset_summarized_tensors_in_dir(
+                os.path.join(dir_, 'dataset_tensors'), tensor_values, tensor_steps)
+            reports.append(report)
+            with open(os.path.join(dir_, 'dataset_tensors_report.pickle'), 'wb') as f:
+                pickle.dump(report, f)
+        for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
+            assert report['ok'], get_dataset_tensors_error_message(
+                dir_,
+                report,
+                config['graph']['summary_tensors'],
+                config['train']['dataset_summary_tensors']
+            )
