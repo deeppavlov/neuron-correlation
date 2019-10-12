@@ -55,7 +55,8 @@ MNIST_MLP_CONFIG = {
             "scheduler": {
                 "counter": 'epoch',
                 "type": "true_on_range",
-                "step": 10
+                "step": 10,
+                "include_stop": True
             },
             "dataset": {
                 "tfds.load": {
@@ -116,7 +117,8 @@ TRAIN_TENSOR_SUMMARY_CONFIG = {
     "tensor1": {
         "counter": "step",
         "type": "true_on_range",
-        "step": 1000
+        "step": 1000,
+        "include_stop": True
     },
     "tensor2": {
         "counter": "step",
@@ -144,7 +146,8 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
                 "indices_of_batches": {
                     "counter": "step",
                     "type": "true_on_range",
-                    "step": 1
+                    "step": 1,
+                    "include_stop": True
                 }
             }
         },
@@ -154,7 +157,8 @@ DATASET_TENSOR_SUMMARY_CONFIG = {
                 "indices_of_batches": {
                     "counter": "step",
                     "type": "true_on_range",
-                    "step": 3
+                    "step": 3,
+                    "include_stop": True
                 }
             }
         }
@@ -233,6 +237,10 @@ def get_list_of_dataset_tensors_names(config):
     return names
 
 
+def list_folders(dir_):
+    return [e for e in os.listdir(dir_) if os.path.isdir(os.path.join(dir_, e))]
+
+
 def check_summarized_tensor(dir_, tensor_name, value, steps):
     report = {'ok': True}
     event_files = [e for e in os.listdir(dir_) if EVENT_FILE_PATTERN.match(e) is not None]
@@ -249,8 +257,8 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
                 if v.tag == tensor_name:
                     summarized_steps.append(step)
                     summarized = tf.make_ndarray(v.tensor)
-                    if np.any(value != summarized):
-                        wrong_results.append((step, summarized))
+                    if np.any(value != summarized) or value.shape != summarized.shape:
+                        wrong_results.append((step, summarized.shape, summarized))
                         report['ok'] = False
     missing_steps = [s for s in steps if s not in summarized_steps]
     unwanted_steps = [s for s in summarized_steps if s not in steps]
@@ -273,26 +281,67 @@ def check_summarized_tensor(dir_, tensor_name, value, steps):
     return report
 
 
-def check_train_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
+def check_summarized_1_dir_for_each_tensor(dir_, tensor_values, tensor_steps):
     """Verifies correctness of summarized tensors in directory.
     The function is for tensors obtained during train operations.
     """
     report = {'ok': True, 'tensors': {}}
-    dirs = [e for e in os.listdir(dir_) if os.path.isdir(os.path.join(dir_, e))]
-    for d in dirs:
-        if d not in tensor_values:
-            report['tensors'][d] = None
-            report['ok'] = False
-        else:
+    dirs = list_folders(dir_)
+    for tensor in tensor_steps:
+        if tensor in dirs:
             dir_report = check_summarized_tensor(
-                os.path.join(dir_, d),
-                d,
-                tensor_values[d],
-                tensor_steps[d]
+                os.path.join(dir_, tensor),
+                tensor,
+                tensor_values[tensor],
+                tensor_steps[tensor]
             )
             report['ok'] = report['ok'] and dir_report['ok']
-            report['tensors'][d] = dir_report
+            report['tensors'][tensor] = dir_report
+        else:
+            report['tensors'][tensor] = None
+            report['ok'] = False
     return report
+
+
+def check_summarized_step_dirs_for_tensors(dir_, tensor_values, tensor_steps):
+    report = {"ok": True, "tensors": {}}
+    dirs = [e for e in os.listdir(dir_) if os.path.isdir(os.path.join(dir_, e))]
+    for tensor in tensor_steps:
+        if tensor in dirs:
+            step_dirs = list_folders(os.path.join(dir_, tensor))
+            wrong_results = []
+            for step_dir in [str(d) for d in tensor_steps[tensor]['train_steps'] if str(d) in step_dirs]:
+                dir_report = check_summarized_tensor(
+                    os.path.join(dir_, tensor, step_dir),
+                    tensor,
+                    tensor_values[tensor],
+                    tensor_steps[tensor]['dataset_steps']
+                )
+                if not dir_report['ok']:
+                    del dir_report['expected_value'], dir_report['expected_shape']
+                    wrong_results.append((int(step_dir), dir_report))
+            missing_steps = [d for d in tensor_steps[tensor]['train_steps'] if str(d) not in step_dirs]
+            unwanted_steps = [d for d in step_dirs if int(d) not in tensor_steps[tensor]['train_steps']]
+            report['tensors'][tensor] = {
+                "ok": len(wrong_results) == 0 and len(unwanted_steps) == 0 and len(missing_steps) == 0,
+                "wrong_results": wrong_results,
+                "missing_steps": missing_steps,
+                "unwanted_steps": unwanted_steps,
+                "expected_value": tensor_values[tensor],
+                "expected_shape": tensor_values[tensor].shape
+            }
+            report['ok'] = report['ok'] and report['tensors'][tensor]['ok']
+        else:
+            report['tensors'][tensor] = None
+            report['ok'] = False
+    return report
+
+
+def prepare_mean_steps(steps):
+    prepared = copy.deepcopy(steps)
+    for tensor, s in prepared.items():
+        prepared[tensor] = s['train_steps']
+    return prepared
 
 
 def check_dataset_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
@@ -300,7 +349,41 @@ def check_dataset_summarized_tensors_in_dir(dir_, tensor_values, tensor_steps):
     The function is for tensors obtained during processing of
     a dataset in the inference mode.
     """
-    pass  # TODO
+    if os.path.isdir(dir_):
+        report = {"ok": True}
+        contents = list_folders(dir_)
+        for ds, ds_steps in tensor_steps.items():
+            if ds in contents:
+                report[ds] = {'ok': True}
+                if 'mean' in ds_steps:
+                    mean_dir = os.path.join(dir_, ds, 'mean')
+                    if os.path.isdir(mean_dir):
+                        mean_steps = prepare_mean_steps(ds_steps['mean'])
+                        mean_report = check_summarized_1_dir_for_each_tensor(
+                            mean_dir, tensor_values, mean_steps)
+                        report[ds]['ok'] = report[ds]['ok'] and mean_report['ok']
+                        report[ds]['mean'] = mean_report
+                    else:
+                        report[ds]['ok'] = False
+                        report[ds]['mean'] = None
+                if 'all' in ds_steps:
+                    all_dir = os.path.join(dir_, ds, 'all')
+                    if os.path.isdir(all_dir):
+                        all_report = check_summarized_step_dirs_for_tensors(
+                            all_dir, tensor_values, ds_steps['all'])
+                        report[ds]['ok'] = report[ds]['ok'] and all_report['ok']
+                        report[ds]['all'] = all_report
+                    else:
+                        report[ds]['ok'] = False
+                        report[ds]['all'] = None
+                report['ok'] = report['ok'] and report[ds]['ok']
+            else:
+                report['ok'] = False
+                report[ds] = None
+    else:
+        report = {k: None for k in tensor_steps.keys()}
+        report['ok'] = False
+    return report
 
 
 def get_number_of_steps(stop_config, dataset_config):
@@ -323,7 +406,9 @@ def get_number_of_steps(stop_config, dataset_config):
 
 def get_true_scheduler_steps(config, num_steps):
     if config['type'] == 'true_on_range':
-        steps = list(range(0, num_steps+1, config['step']))
+        steps = list(range(0, num_steps, config['step']))
+        if config['include_stop']:
+            steps.append(num_steps)
     elif config['type'] == 'true_on_logrange':
         steps = scheduler_utils.logarithmic_int_range(
             config['init'],
@@ -398,7 +483,6 @@ def make_short_report(report):
                 v['number_of_wrong_results'] = len(v['wrong_results'])
                 if v['wrong_results']:
                     v['zeroth_wrong_result'] = v['wrong_results'][0]
-                    v['shape_of_zeroth_wrong_result'] = v['wrong_results'][0][1].shape
                 del v['wrong_results']
     return report
 
@@ -464,7 +548,7 @@ class TestTrainRepeatedly:
         )
         reports = []
         for dir_ in launches_dirs:
-            report = check_train_summarized_tensors_in_dir(
+            report = check_summarized_1_dir_for_each_tensor(
                 os.path.join(dir_, 'train_tensors'), tensor_values, tensor_steps)
             reports.append(report)
             with open(os.path.join(dir_, 'train_tensors_report.pickle'), 'wb') as f:
