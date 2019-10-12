@@ -17,6 +17,7 @@ from tests.utils_for_testing.path import get_repo_root
 
 
 EVENT_FILE_PATTERN = re.compile(r'^events\.out\.tfevents.[0-9]{10}\.')
+STARS = '*'*20
 
 
 MNIST_MLP_CONFIG = {
@@ -468,10 +469,33 @@ def get_dataset_tensors_error_message(
         creation_config,
         collection_config,
 ):
-    pass  # TODO
+    tmpl = "Summarized tensors in launch directory '{dir_}' are not OK.\n" \
+        "Short report:\n" \
+        "{short}\n" \
+        "{stars}\n" \
+        "Full report is in\n" \
+        "'{full}'\n" \
+        "{stars}\n" \
+        "config['graph']['summary_tensors']:\n" \
+        "{create}\n" \
+        "{stars}\n" \
+        "config['train']['train_summary_tensors']:\n" \
+        "{collect}"
+    short = {}
+    for ds in set(report.keys()) - {'ok'}:
+        short[ds] = 'OK' if report[ds]['ok'] else 'not OK'
+    msg = tmpl.format(
+        dir_=launch_dir,
+        short=short,
+        full=os.path.join(launch_dir, 'tensors_report.pickle'),
+        create=creation_config,
+        collect=collection_config,
+        stars=STARS,
+    )
+    return msg
 
 
-def make_short_report(report):
+def make_short_report(report, add_wrong_result_example=True):
     report = copy.deepcopy(report)
     for dir_report in report.values():
         if isinstance(dir_report, dict):
@@ -481,7 +505,7 @@ def make_short_report(report):
                 v['number_of_unwanted_steps'] = len(v['unwanted_steps'])
                 del v['unwanted_steps']
                 v['number_of_wrong_results'] = len(v['wrong_results'])
-                if v['wrong_results']:
+                if v['wrong_results'] and add_wrong_result_example:
                     v['zeroth_wrong_result'] = v['wrong_results'][0]
                 del v['wrong_results']
     return report
@@ -554,15 +578,24 @@ class TestTrainRepeatedly:
             with open(os.path.join(dir_, 'train_tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
-            assert report['ok'], "Summarized tensors in directory '{}' are not ok. " \
-                                 "Short report:\n{}\n**********\nFull report is in\n'{}'\n**********\n" \
-                                 "config['graph']['summary_tensors']:\n{}\n**********" \
-                                 "\nconfig['train']['train_summary_tensors']:\n{}".format(
-                os.path.join(dir_, 'train_tensors'),
-                make_short_report(report),
-                os.path.join(dir_, 'train_tensors_report.pickle'),
-                config['graph']['summary_tensors'],
-                config['train']['train_summary_tensors']
+            assert report['ok'], "Summarized tensors in directory '{dir_}' are not OK. " \
+                                 "Short report:\n" \
+                                 "{short}\n" \
+                                 "{stars}\n" \
+                                 "Full report is in\n" \
+                                 "'{full}'\n" \
+                                 "{stars}\n" \
+                                 "config['graph']['summary_tensors']:\n" \
+                                 "{create}\n" \
+                                 "{stars}\n" \
+                                 "config['train']['train_summary_tensors']:\n" \
+                                 "{collect}".format(
+                dir_=os.path.join(dir_, 'train_tensors'),
+                short=make_short_report(report),
+                full=os.path.join(dir_, 'train_tensors_report.pickle'),
+                create=config['graph']['summary_tensors'],
+                collect=config['train']['train_summary_tensors'],
+                stars=STARS,
             )
 
     def test_dataset_tensor_saving(self):
