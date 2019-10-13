@@ -27,7 +27,7 @@ def train_repeatedly(config: Dict):
         config_for_repeat = copy.deepcopy(config)
         del config_for_repeat['num_repeats']
         config_for_repeat['save_path'] = os.path.join(config_for_repeat['save_path'], str(i))
-        p = mp.Process(train_once, args=(config,))
+        p = mp.Process(target=train_once, args=(config,))
         p.start()
         p.join()
     metrics_stats = calculate_metrics_stats(config['save_path'])
