@@ -18,18 +18,18 @@ from tests.utils_for_testing.path import get_repo_root
 
 EVENT_FILE_PATTERN = re.compile(r'^events\.out\.tfevents.[0-9]{10}\.')
 STARS = '*'*20
+TR_PATH = os.path.join(
+    get_repo_root(),
+    "results_of_tests",
+    "integration",
+    "test_mnist",
+    "train_repeatedly",
+)
 
 
 MNIST_MLP_CONFIG = {
     "num_repeats": 10,
-    "save_path": os.path.join(
-        get_repo_root(),
-        "results_of_tests",
-        "integration",
-        "test_mnist",
-        "train_repeatedly",
-        "only_training"
-    ),
+    "save_path": os.path.join(TR_PATH, "only_training"),
     "graph": {
         "type": "feedforward",
         "input_size": 784,
@@ -185,6 +185,15 @@ SUMMARY_ZEROS_ONES = {
 }
 
 
+SUMMARY_COUNTER = {
+    "counter": {
+        "module": "tests.utils_for_testing.tf_utils",
+        "function": "get_counter_tensor",
+        "args": []
+    }
+}
+
+
 def get_number_from_file(file_name):
     """Opens file in read mode and tries to convert text inside into float.
     If succeeds, returns a number else returns `None`
@@ -317,7 +326,9 @@ def check_summarized_step_dirs_for_tensor(dir_, name, value, steps):
     missing_steps = [d for d in steps['train'] if str(d) not in step_dirs]
     unwanted_steps = [d for d in step_dirs if int(d) not in steps['train']]
     report = {
-        "ok": len(wrong_results) == 0 and len(unwanted_steps) == 0 and len(missing_steps) == 0,
+        "ok": len(wrong_results) == 0 \
+              and len(unwanted_steps) == 0 \
+              and len(missing_steps) == 0,
         "wrong_results": wrong_results,
         "missing_steps": missing_steps,
         "unwanted_steps": unwanted_steps,
@@ -530,14 +541,7 @@ def make_short_report(report, add_wrong_result_example=True):
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check saved loss value on test dataset"""
-        save_path = os.path.join(
-            get_repo_root(),
-            "results_of_tests",
-            "integration",
-            "test_mnist",
-            "train_repeatedly",
-            "only_training"
-        )
+        save_path = os.path.join(TR_PATH, "only_training")
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
@@ -560,14 +564,7 @@ class TestTrainRepeatedly:
         of summarized tensors and steps on which
         they were collected.
         """
-        save_path = os.path.join(
-            get_repo_root(),
-            "results_of_tests",
-            "integration",
-            "test_mnist",
-            "train_repeatedly",
-            "train_tensor_summary"
-        )
+        save_path = os.path.join(TR_PATH, "train_tensor_summary")
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
@@ -606,14 +603,7 @@ class TestTrainRepeatedly:
         of summarized tensors and steps on
         which they their collected
         """
-        save_path = os.path.join(
-            get_repo_root(),
-            "results_of_tests",
-            "integration",
-            "test_mnist",
-            "train_repeatedly",
-            "dataset_tensors"
-        )
+        save_path = os.path.join(TR_PATH, "dataset_tensors")
         config = copy.deepcopy(MNIST_MLP_CONFIG)
         config['save_path'] = save_path
 
@@ -663,3 +653,13 @@ class TestTrainRepeatedly:
 
     def test_dataset_mean_batch_indices(self):
         """Check batch indices on which tensors are collected"""
+        save_path = os.path.join(
+            get_repo_root(),
+            "results_of_tests",
+            "integration",
+            "test_mnist",
+            "train_repeatedly",
+            "summary_batch_indices"
+        )
+        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        config['save_path'] = save_path
