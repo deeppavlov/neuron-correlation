@@ -607,7 +607,7 @@ class TestTrainRepeatedly:
         config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
 
-        config['train']['dataset_summary_tensors'] = copy.deepcopy(DS_SUMMARY_CFG)
+        config['train']['dataset_summary_tensors'] = copy.deepcopy(DS_ZEROS_ONES)
         config['graph']['summary_tensors'] = copy.deepcopy(ZEROS_ONES_CREATION)
 
         api.train_repeatedly(config)
