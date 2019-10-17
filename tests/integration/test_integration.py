@@ -18,7 +18,7 @@ from tests.utils_for_testing.path import get_repo_root
 
 EVENT_FILE_PATTERN = re.compile(r'^events\.out\.tfevents.[0-9]{10}\.')
 STARS = '*'*20
-TR_PATH = os.path.join(
+TRR_PATH = os.path.join(
     get_repo_root(),
     "results_of_tests",
     "integration",
@@ -27,9 +27,9 @@ TR_PATH = os.path.join(
 )
 
 
-MNIST_MLP_CONFIG = {
+MNIST_MLP_CFG = {
     "num_repeats": 10,
-    "save_path": os.path.join(TR_PATH, "only_training"),
+    "save_path": os.path.join(TRR_PATH, "only_training"),
     "graph": {
         "type": "feedforward",
         "input_size": 784,
@@ -114,7 +114,7 @@ MNIST_MLP_CONFIG = {
 }
 
 
-TRAIN_TENSOR_SUMMARY_CONFIG = {
+TR_ZEROS_ONES = {
     "tensor1": {
         "counter": "step",
         "type": "true_on_range",
@@ -131,7 +131,7 @@ TRAIN_TENSOR_SUMMARY_CONFIG = {
 }
 
 
-DATASET_TENSORS_SUMMARY_CONFIG = {
+DS_ZEROS_ONES = {
     "tensor1": {
         "type": "mean",
         "dataset": {
@@ -142,7 +142,7 @@ DATASET_TENSORS_SUMMARY_CONFIG = {
                 "as_supervised": True
             }
         },
-        "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor1"],
+        "train_steps": TR_ZEROS_ONES["tensor1"],
         "indices_of_batches": {
             "counter": "step",
             "type": "true_on_range",
@@ -160,7 +160,7 @@ DATASET_TENSORS_SUMMARY_CONFIG = {
                 "as_supervised": True
             }
         },
-        "train_steps": TRAIN_TENSOR_SUMMARY_CONFIG["tensor2"],
+        "train_steps": TR_ZEROS_ONES["tensor2"],
         "indices_of_batches": {
             "counter": "step",
             "type": "true_on_range",
@@ -171,7 +171,7 @@ DATASET_TENSORS_SUMMARY_CONFIG = {
 }
 
 
-SUMMARY_ZEROS_ONES = {
+ZEROS_ONES_CREATION = {
     "tensor1": {
         "module": "tensorflow",
         "function": "zeros",
@@ -185,7 +185,7 @@ SUMMARY_ZEROS_ONES = {
 }
 
 
-SUMMARY_COUNTER = {
+COUNTER_CREATION = {
     "counter": {
         "module": "tests.utils_for_testing.tf_utils",
         "function": "get_counter_tensor",
@@ -541,8 +541,8 @@ def make_short_report(report, add_wrong_result_example=True):
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check saved loss value on test dataset"""
-        save_path = os.path.join(TR_PATH, "only_training")
-        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        save_path = os.path.join(TRR_PATH, "only_training")
+        config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
 
         api.train_repeatedly(config)
@@ -564,12 +564,12 @@ class TestTrainRepeatedly:
         of summarized tensors and steps on which
         they were collected.
         """
-        save_path = os.path.join(TR_PATH, "train_tensor_summary")
-        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        save_path = os.path.join(TRR_PATH, "train_tensor_summary")
+        config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
 
-        config['train']['train_summary_tensors'] = copy.deepcopy(TRAIN_TENSOR_SUMMARY_CONFIG)
-        config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_ZEROS_ONES)
+        config['train']['train_summary_tensors'] = copy.deepcopy(TR_ZEROS_ONES)
+        config['graph']['summary_tensors'] = copy.deepcopy(ZEROS_ONES_CREATION)
 
         api.train_repeatedly(config)
         launches_dirs = [os.path.join(save_path, '{}').format(i) for i in range(config['num_repeats'])]
@@ -603,28 +603,24 @@ class TestTrainRepeatedly:
         of summarized tensors and steps on
         which they their collected
         """
-        save_path = os.path.join(TR_PATH, "dataset_tensors")
-        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        save_path = os.path.join(TRR_PATH, "dataset_tensors")
+        config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
 
-        config['train']['dataset_summary_tensors'] = \
-            copy.deepcopy(DATASET_TENSORS_SUMMARY_CONFIG)
-        config['graph']['summary_tensors'] = \
-            copy.deepcopy(SUMMARY_ZEROS_ONES)
+        config['train']['dataset_summary_tensors'] = copy.deepcopy(DS_SUMMARY_CFG)
+        config['graph']['summary_tensors'] = copy.deepcopy(ZEROS_ONES_CREATION)
 
         api.train_repeatedly(config)
         launches_dirs = [
             os.path.join(save_path, '{}').format(i)
             for i in range(config['num_repeats'])
         ]
-        summarized_tensors_names = list(
-            config['train']['dataset_summary_tensors'].keys())
+        summarized_tensors_names = list(config['train']['dataset_summary_tensors'].keys())
         dataset_tensors_creation_config = {
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in summarized_tensors_names
         }
-        tensor_values = get_summary_tensors_values(
-            dataset_tensors_creation_config)
+        tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
         tensor_steps = get_dataset_summary_tensors_steps(
             config['train']['dataset_summary_tensors'],
             config['train']['stop'],
@@ -640,8 +636,7 @@ class TestTrainRepeatedly:
                 tensor_steps
             )
             reports.append(report)
-            with open(
-                    os.path.join(dir_, 'dataset_tensors_report.pickle'), 'wb') as f:
+            with open(os.path.join(dir_, 'dataset_tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
             assert report['ok'], get_ds_tensors_err_msg(
@@ -653,13 +648,6 @@ class TestTrainRepeatedly:
 
     def test_dataset_mean_batch_indices(self):
         """Check batch indices on which tensors are collected"""
-        save_path = os.path.join(
-            get_repo_root(),
-            "results_of_tests",
-            "integration",
-            "test_mnist",
-            "train_repeatedly",
-            "summary_batch_indices"
-        )
-        config = copy.deepcopy(MNIST_MLP_CONFIG)
+        save_path = os.path.join(TRR_PATH, "summary_batch_indices")
+        config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
