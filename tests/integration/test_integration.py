@@ -171,7 +171,7 @@ DATASET_TENSORS_SUMMARY_CONFIG = {
 }
 
 
-SUMMARY_TENSORS_CONFIG = {
+SUMMARY_ZEROS_ONES = {
     "tensor1": {
         "module": "tensorflow",
         "function": "zeros",
@@ -572,7 +572,7 @@ class TestTrainRepeatedly:
         config['save_path'] = save_path
 
         config['train']['train_summary_tensors'] = copy.deepcopy(TRAIN_TENSOR_SUMMARY_CONFIG)
-        config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_TENSORS_CONFIG)
+        config['graph']['summary_tensors'] = copy.deepcopy(SUMMARY_ZEROS_ONES)
 
         api.train_repeatedly(config)
         launches_dirs = [os.path.join(save_path, '{}').format(i) for i in range(config['num_repeats'])]
@@ -620,7 +620,7 @@ class TestTrainRepeatedly:
         config['train']['dataset_summary_tensors'] = \
             copy.deepcopy(DATASET_TENSORS_SUMMARY_CONFIG)
         config['graph']['summary_tensors'] = \
-            copy.deepcopy(SUMMARY_TENSORS_CONFIG)
+            copy.deepcopy(SUMMARY_ZEROS_ONES)
 
         api.train_repeatedly(config)
         launches_dirs = [
@@ -660,3 +660,6 @@ class TestTrainRepeatedly:
                 config['graph']['summary_tensors'],
                 config['train']['dataset_summary_tensors']
             )
+
+    def test_dataset_mean_batch_indices(self):
+        """Check batch indices on which tensors are collected"""
