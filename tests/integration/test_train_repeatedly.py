@@ -185,11 +185,33 @@ ZEROS_ONES_CREATION = {
 }
 
 
+DS_COUNTER = {
+    "counter": {
+        "type": "mean",
+        "dataset": {
+            "tfds.load": {
+                "name": "mnist:3.*.*",
+                "split": "test",
+                "batch_size": 100,
+                "as_supervised": True
+            }
+        },
+        "train_steps": TR_ZEROS_ONES["tensor1"],
+        "indices_of_batches": {
+            "counter": "step",
+            "type": "true_on_range",
+            "step": 5,
+            "include_stop": True
+        }
+    }
+}
+
+
 COUNTER_CREATION = {
     "counter": {
         "module": "tests.utils_for_testing.tf_utils",
         "function": "get_counter_tensor",
-        "args": []
+        "args": [100]
     }
 }
 
@@ -239,6 +261,15 @@ def get_summary_tensors_values(config):
         values[k] = q.get()
         p.join()
     return values
+
+
+def calculate_counter_mean(n, step):
+    arr = -np.ones([n])
+    n_collected = n // step
+    lsp = np.linspace(0, n_collected - 1, n_collected)
+    for i, v in enumerate(lsp):
+        arr[step * i] = v / n_collected
+    return arr
 
 
 def list_folders(dir_):
@@ -493,7 +524,7 @@ def get_ds_tensors_err_msg(
     return msg
 
 
-def get_tr_tensors_err_msg(
+def get_err_msg_1dir_for_tensor(
         launch_dir,
         report,
         creation_config,
@@ -538,6 +569,10 @@ def make_short_report(report, add_wrong_result_example=True):
     return report
 
 
+def get_ldirs(save_path, n):
+    return [os.path.join(save_path, str(i)) for i in range(n)]
+
+
 class TestTrainRepeatedly:
     def test_training_without_tensor_saving(self):
         """Check saved loss value on test dataset"""
@@ -572,12 +607,12 @@ class TestTrainRepeatedly:
         config['graph']['summary_tensors'] = copy.deepcopy(ZEROS_ONES_CREATION)
 
         api.train_repeatedly(config)
-        launches_dirs = [os.path.join(save_path, '{}').format(i) for i in range(config['num_repeats'])]
-        train_tensors_creation_config = {
+        launches_dirs = get_ldirs(save_path, config['num_repeats'])
+        tr_tensors_cr_cfg = {
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in config['train']['train_summary_tensors']
         }
-        tensor_values = get_summary_tensors_values(train_tensors_creation_config)
+        tensor_values = get_summary_tensors_values(tr_tensors_cr_cfg)
         tensor_steps = get_train_summary_tensors_steps(
             config['train']['train_summary_tensors'],
             config['train']['stop'],
@@ -591,7 +626,7 @@ class TestTrainRepeatedly:
             with open(os.path.join(dir_, 'train_tensors_report.pickle'), 'wb') as f:
                 pickle.dump(report, f)
         for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
-            assert report['ok'], get_tr_tensors_err_msg(
+            assert report['ok'], get_err_msg_1dir_for_tensor(
                 dir_,
                 report,
                 config['graph']['summary_tensors'],
@@ -611,16 +646,13 @@ class TestTrainRepeatedly:
         config['graph']['summary_tensors'] = copy.deepcopy(ZEROS_ONES_CREATION)
 
         api.train_repeatedly(config)
-        launches_dirs = [
-            os.path.join(save_path, '{}').format(i)
-            for i in range(config['num_repeats'])
-        ]
+        launches_dirs = get_ldirs(save_path, config['num_repeats'])
         summarized_tensors_names = list(config['train']['dataset_summary_tensors'].keys())
-        dataset_tensors_creation_config = {
+        ds_tensors_cr_cfg = {
             k: v for k, v in config['graph']['summary_tensors'].items()
             if k in summarized_tensors_names
         }
-        tensor_values = get_summary_tensors_values(dataset_tensors_creation_config)
+        tensor_values = get_summary_tensors_values(ds_tensors_cr_cfg)
         tensor_steps = get_dataset_summary_tensors_steps(
             config['train']['dataset_summary_tensors'],
             config['train']['stop'],
@@ -648,6 +680,40 @@ class TestTrainRepeatedly:
 
     def test_dataset_mean_batch_indices(self):
         """Check batch indices on which tensors are collected"""
-        save_path = os.path.join(TRR_PATH, "summary_batch_indices")
+        save_path = os.path.join(TRR_PATH, "ds_mean_batch_indices")
         config = copy.deepcopy(MNIST_MLP_CFG)
         config['save_path'] = save_path
+
+        config['train']['dataset_summary_tensors'] = copy.deepcopy(DS_COUNTER)
+        config['graph']['summary_tensors'] = copy.deepcopy(COUNTER_CREATION)
+
+        api.train_repeatedly(config)
+
+        launches_dirs = get_ldirs(save_path, config['num_repeats'])
+        tensor_steps = get_dataset_summary_tensors_steps(
+            config['train']['dataset_summary_tensors'],
+            config['train']['stop'],
+            config['train']['dataset']
+        )
+        reports = []
+        value = calculate_counter_mean(
+            COUNTER_CREATION['counter']['args'][0],
+            DS_COUNTER['counter']['indices_of_batches']['step']
+        )
+        for dir_ in launches_dirs:
+            report = check_summarized_tensor(
+                os.path.join(dir_, 'dataset_tensors', 'counter'),
+                'counter',
+                value,
+                tensor_steps['counter']['train']
+            )
+            reports.append(report)
+            with open(os.path.join(dir_, 'dataset_tensors_report.pickle'), 'wb') as f:
+                pickle.dump(report, f)
+        for i, (dir_, report) in enumerate(zip(launches_dirs, reports)):
+            assert report['ok'], get_err_msg_1dir_for_tensor(
+                dir_,
+                report,
+                config['graph']['summary_tensors'],
+                config['train']['dataset_summary_tensors']
+            )
